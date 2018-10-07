@@ -25,6 +25,13 @@ class Exercise2 {
     void implementsIntegerMultiplierUsingAnonymousClass() {
         Multiplier<Integer> multiplier = null;
 
+        multiplier = new Multiplier<Integer>() {
+            @Override
+            public Integer multiply(Integer value, int multiplier) {
+                return value * multiplier;
+            }
+        };
+
         testIntegerMultiplier(multiplier);
     }
 
@@ -32,12 +39,18 @@ class Exercise2 {
     void implementsMultiplierUsingStatementLambda() {
         Multiplier<Integer> multiplier = null;
 
+        multiplier = (v, m) -> {
+            return v * m;
+        };
+
         testIntegerMultiplier(multiplier);
     }
 
     @Test
     void implementsIntegerMultiplierUsingExpressionLambda() {
         Multiplier<Integer> multiplier = null;
+
+        multiplier = (v, m) -> v * m;
 
         testIntegerMultiplier(multiplier);
     }
@@ -62,6 +75,8 @@ class Exercise2 {
     void implementsStringMultiplierUsingClassMethodReference() {
         Multiplier<String> multiplier = null;
 
+        multiplier = Exercise2::multiplyString;
+
         assertThat(multiplier.multiply("a", 3), is("aaa"));
         assertThat(multiplier.multiply("qwerty", 0), is(emptyString()));
         assertThat(multiplier.twice("aA"), is("aAaA"));
@@ -82,6 +97,8 @@ class Exercise2 {
     @Test
     void implementsStringMultiplierUsingObjectMethodReference() {
         Multiplier<String> multiplier = null;
+
+        multiplier = this::stringSumWithDelimiter;
 
         assertThat(multiplier.multiply("a", 3), is("a-a-a"));
         assertThat(multiplier.multiply("qwerty", 0), is(emptyString()));
