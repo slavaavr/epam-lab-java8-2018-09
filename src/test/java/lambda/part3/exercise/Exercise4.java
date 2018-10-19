@@ -1,5 +1,6 @@
 package lambda.part3.exercise;
 
+import com.google.common.primitives.Chars;
 import lambda.data.Employee;
 import lambda.data.JobHistoryEntry;
 import lambda.data.Person;
@@ -19,20 +20,37 @@ class Exercise4 {
 
     private static class LazyCollectionHelper<T, R> {
 
+        private List<T> source;
+        private Function<T, List<R>> lazyWorker;
+
+        private LazyCollectionHelper(List<T> list, Function<T, List<R>> worker) {
+            this.source = list;
+            this.lazyWorker = worker;
+        }
+
         public static <T> LazyCollectionHelper<T, T> from(List<T> list) {
-            throw new UnsupportedOperationException();
+            return new LazyCollectionHelper<>(list, Collections::singletonList);
         }
 
         public <U> LazyCollectionHelper<T, U> flatMap(Function<R, List<U>> flatMapping) {
-            throw new UnsupportedOperationException();
+            return new LazyCollectionHelper<>(source, lazyWorker.andThen(transform(flatMapping)));
+
         }
 
         public <U> LazyCollectionHelper<T, U> map(Function<R, U> mapping) {
-            throw new UnsupportedOperationException();
+            return new LazyCollectionHelper<>(source, lazyWorker.andThen(transform(mapping.andThen(Collections::singletonList))));
         }
 
         public List<R> force() {
-            throw new UnsupportedOperationException();
+            return transform(lazyWorker).apply(source);
+        }
+
+        private <U, E> Function<List<E>, List<U>> transform(Function<E, List<U>> mapping) {
+            return items -> {
+                List<U> ans = new ArrayList<>();
+                items.forEach(el -> ans.addAll(mapping.apply(el)));
+                return ans;
+            };
         }
     }
 
@@ -40,17 +58,16 @@ class Exercise4 {
     void mapEmployeesToCodesOfLetterTheirPositionsUsingLazyFlatMapHelper() {
         List<Employee> employees = getEmployees();
 
-        List<Integer> codes = null;
-        // TODO              LazyCollectionHelper.from(employees)
-        // TODO                                  .flatMap(Employee -> JobHistoryEntry)
-        // TODO                                  .map(JobHistoryEntry -> String(position))
-        // TODO                                  .flatMap(String -> Character(letter))
-        // TODO                                  .map(Character -> Integer(code letter)
-        // TODO                                  .force();
+        List<Integer> codes = LazyCollectionHelper.from(employees)
+                .flatMap(Employee::getJobHistory)
+                .map(JobHistoryEntry::getPosition)
+                .flatMap(position -> Chars.asList(position.toCharArray()))
+                .map(ch -> (int) ch)
+                .force();
         assertThat(codes, Matchers.contains(calcCodes("dev", "dev", "tester", "dev", "dev", "QA", "QA", "dev", "tester", "tester", "QA", "QA", "QA", "dev").toArray()));
     }
 
-    private static List<Integer> calcCodes(String...strings) {
+    private static List<Integer> calcCodes(String... strings) {
         List<Integer> codes = new ArrayList<>();
         for (String string : strings) {
             for (char letter : string.toCharArray()) {
