@@ -51,7 +51,16 @@ class Exercise2 {
      * @see <a href="https://habr.com/company/epam_systems/blog/247805">Сканирование</a>
      */
     private static <T> T[] sequentialPrefix(T[] source, BinaryOperator<T> operator) {
-        throw new UnsupportedOperationException();
+        T[] res = source.clone();
+        int n = source.length;
+        int dist;
+        for (int i = 0; i < log2(n) + 1; i++) {
+            dist = pow(2, i);
+            for (int j = n - 1; j > dist - 1; j--) {
+                res[j] = operator.apply(res[j], res[j - dist]);
+            }
+        }
+        return res;
     }
 
     @Test
@@ -80,7 +89,9 @@ class Exercise2 {
      * @throws IllegalArgumentException Если {@code value <= 0}
      */
     private static int log2(int value) throws IllegalArgumentException {
-        throw new UnsupportedOperationException();
+        if (value <= 0)
+            throw new IllegalArgumentException();
+        return (int) (Math.log(value) / Math.log(2));
     }
 
     @Test
@@ -111,6 +122,8 @@ class Exercise2 {
      * @throws IllegalArgumentException Если {@code base < 0} или {@code degree < 0}
      */
     private static int pow(int base, int degree) throws IllegalArgumentException {
-        throw new UnsupportedOperationException();
+        if (base <0 || degree < 0)
+            throw new IllegalArgumentException();
+        return (int) Math.pow(base, degree);
     }
 }
