@@ -10,6 +10,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static java.util.Comparator.comparingInt;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 @SuppressWarnings({"ConstantConditions", "unused"})
@@ -19,7 +22,11 @@ class Exercise2 {
     void calcAverageAgeOfEmployees() {
         List<Employee> employees = getEmployees();
 
-        Double expected = null;
+        Double expected = employees.stream()
+                .map(Employee::getPerson)
+                .mapToInt(Person::getAge)
+                .average()
+                .orElseThrow(IllegalStateException::new);
 
         assertThat(expected, Matchers.closeTo(33.66, 0.1));
     }
@@ -28,7 +35,10 @@ class Exercise2 {
     void findPersonWithLongestFullName() {
         List<Employee> employees = getEmployees();
 
-        Person expected = null;
+        Person expected = employees.stream()
+                .map(Employee::getPerson)
+                .max(comparingInt(p -> p.getFullName().length()))
+                .orElseThrow(IllegalStateException::new);
 
         assertThat(expected, Matchers.is(employees.get(1).getPerson()));
     }
@@ -37,7 +47,13 @@ class Exercise2 {
     void findEmployeeWithMaximumDurationAtOnePosition() {
         List<Employee> employees = getEmployees();
 
-        Employee expected = null;
+        Employee expected = employees.stream()
+                .max(comparingInt(emp -> emp.getJobHistory().stream()
+                        .collect(collectingAndThen(toMap(JobHistoryEntry::getPosition, JobHistoryEntry::getDuration, Integer::sum),
+                                jobMap -> jobMap.values().stream()
+                                        .max(Integer::compareTo)
+                                        .orElseThrow(IllegalStateException::new)))))
+                .orElseThrow(IllegalStateException::new);
 
         assertThat(expected, Matchers.is(employees.get(4)));
     }
@@ -51,7 +67,12 @@ class Exercise2 {
     void calcTotalSalaryWithCoefficientWorkExperience() {
         List<Employee> employees = getEmployees();
 
-        Double expected = null;
+        Double expected = employees.stream()
+                .map(Employee::getJobHistory)
+                .map(jobHistory -> jobHistory.get(jobHistory.size() - 1))
+                .map(JobHistoryEntry::getDuration)
+                .mapToDouble(duration -> duration > 3 ? 75_000 * 1.2 : 75_000)
+                .sum();
 
         assertThat(expected, Matchers.closeTo(465000.0, 0.001));
     }
