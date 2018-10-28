@@ -7,15 +7,15 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 @SuppressWarnings({"ConstantConditions", "unused"})
 class Exercise1 {
@@ -24,18 +24,25 @@ class Exercise1 {
     void calcTotalYearsSpentInEpam() {
         List<Employee> employees = getEmployees();
 
-        // TODO реализация
-        Long hours = null;
+        Long years = employees.stream()
+                .flatMap(emp -> emp.getJobHistory().stream())
+                .filter(jobHistory -> "Epam".equalsIgnoreCase(jobHistory.getEmployer()))
+                .mapToLong(JobHistoryEntry::getDuration)
+                .sum();
 
-        assertThat(hours, is(19L));
+        assertThat(years, is(19L));
     }
 
     @Test
     void findPersonsWithQaExperience() {
         List<Employee> employees = getEmployees();
 
-        // TODO реализация
-        Set<Person> workedAsQa = null;
+        Set<Person> workedAsQa = employees.stream()
+                .filter(emp -> emp.getJobHistory().stream()
+                        .map(JobHistoryEntry::getPosition)
+                        .anyMatch("QA"::equalsIgnoreCase))
+                .map(Employee::getPerson)
+                .collect(toSet());
 
         assertThat(workedAsQa, containsInAnyOrder(
                 employees.get(2).getPerson(),
@@ -48,16 +55,18 @@ class Exercise1 {
     void composeFullNamesOfEmployeesUsingLineSeparatorAsDelimiter() {
         List<Employee> employees = getEmployees();
 
-        // TODO реализация
-        String result = null;
+        String result = employees.stream()
+                .map(Employee::getPerson)
+                .map(Person::getFullName)
+                .collect(joining("\n"));
 
         assertThat(result, is(
                 "Иван Мельников\n"
-                + "Александр Дементьев\n"
-                + "Дмитрий Осинов\n"
-                + "Анна Светличная\n"
-                + "Игорь Толмачёв\n"
-                + "Иван Александров"));
+                        + "Александр Дементьев\n"
+                        + "Дмитрий Осинов\n"
+                        + "Анна Светличная\n"
+                        + "Игорь Толмачёв\n"
+                        + "Иван Александров"));
     }
 
     @Test
@@ -65,8 +74,13 @@ class Exercise1 {
     void groupPersonsByFirstPositionUsingToMap() {
         List<Employee> employees = getEmployees();
 
-        // TODO реализация
-        Map<String, Set<Person>> result = null;
+        Map<String, Set<Person>> result = employees.stream()
+                .collect(toMap(emp -> emp.getJobHistory().get(0).getPosition(),
+                        emp -> new HashSet<>(singleton(emp.getPerson())),
+                        (a, b) -> {
+                            a.addAll(b);
+                            return a;
+                        }));
 
         assertThat(result, hasEntry(is("dev"), contains(employees.get(0).getPerson())));
         assertThat(result, hasEntry(is("QA"), containsInAnyOrder(employees.get(2).getPerson(), employees.get(5).getPerson())));
@@ -78,8 +92,9 @@ class Exercise1 {
     void groupPersonsByFirstPositionUsingGroupingByCollector() {
         List<Employee> employees = getEmployees();
 
-        // TODO реализация
-        Map<String, Set<Person>> result = null;
+        Map<String, Set<Person>> result =  employees.stream()
+                .collect(groupingBy(emp -> emp.getJobHistory().get(0).getPosition(),
+                        mapping(Employee::getPerson, toSet())));
 
         assertThat(result, hasEntry(is("dev"), contains(employees.get(0).getPerson())));
         assertThat(result, hasEntry(is("QA"), containsInAnyOrder(employees.get(2).getPerson(), employees.get(5).getPerson())));
