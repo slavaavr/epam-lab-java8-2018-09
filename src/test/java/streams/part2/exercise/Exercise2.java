@@ -3,19 +3,16 @@ package streams.part2.exercise;
 import lambda.data.Employee;
 import lambda.data.JobHistoryEntry;
 import lambda.data.Person;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 @SuppressWarnings("ConstantConditions")
 class Exercise2 {
@@ -76,7 +73,10 @@ class Exercise2 {
     void employersStuffList() {
         List<Employee> employees = getEmployees();
 
-        Map<String, Set<Person>> result = null;
+        Map<String, Set<Person>> result = employees.stream()
+                .flatMap(emp -> emp.getJobHistory().stream()
+                        .map(job -> new HashMap.SimpleEntry<>(job.getEmployer(), emp.getPerson())))
+                .collect(groupingBy(HashMap.SimpleEntry::getKey, mapping(HashMap.SimpleEntry::getValue, toSet())));
 
         assertThat(result, hasEntry((is("yandex")), contains(employees.get(2).getPerson())));
         assertThat(result, hasEntry((is("mail.ru")), contains(employees.get(2).getPerson())));
@@ -142,7 +142,11 @@ class Exercise2 {
     void indexByFirstEmployer() {
         List<Employee> employees = getEmployees();
 
-        Map<String, Set<Person>> result = null;
+        Map<String, Set<Person>> result = employees.stream()
+                .map(emp -> emp.getJobHistory().stream()
+                        .map(job -> new HashMap.SimpleEntry<>(job.getEmployer(), emp.getPerson()))
+                        .findFirst().orElseThrow(IllegalStateException::new))
+                .collect(groupingBy(HashMap.SimpleEntry::getKey, mapping(HashMap.SimpleEntry::getValue, toSet())));
 
         assertThat(result, hasEntry(is("yandex"), contains(employees.get(2).getPerson())));
         assertThat(result, hasEntry(is("T-Systems"), containsInAnyOrder(employees.get(3).getPerson(), employees.get(5).getPerson())));
@@ -157,11 +161,27 @@ class Exercise2 {
      * Преобразовать список сотрудников в отображение [компания -> сотрудник, суммарно проработавший в ней наибольшее время].
      * Гарантируется, что такой сотрудник будет один.
      */
+
+    @Data
+    @AllArgsConstructor
+    private class Trio {
+        private String employer;
+        private Person person;
+        private Integer experience;
+    }
+
     @Test
     void greatestExperiencePerEmployer() {
         List<Employee> employees = getEmployees();
 
-        Map<String, Person> collect = null;
+        Map<String, Person> collect = employees.stream()
+                .flatMap(emp -> emp.getJobHistory().stream()
+                        .collect(collectingAndThen(groupingBy(JobHistoryEntry::getEmployer, summingInt(JobHistoryEntry::getDuration)), el ->
+                                el.entrySet().stream()
+                                        .collect(ArrayList<Trio>::new,
+                                                (list, entry) -> list.add(new Trio(entry.getKey(), emp.getPerson(), entry.getValue())),
+                                                ArrayList::addAll))).stream())
+                .collect(groupingBy(Trio::getEmployer, collectingAndThen(maxBy(comparing(Trio::getExperience)), trio -> trio.get().getPerson())));
 
         assertThat(collect, hasEntry("EPAM", employees.get(4).getPerson()));
         assertThat(collect, hasEntry("google", employees.get(1).getPerson()));
